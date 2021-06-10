@@ -1,0 +1,23 @@
+#!/usr/bin/bpftrace
+
+// from BPF Performance tools by Brendan Gregg
+
+// event type (kprobe, tracepoint, etc) and name 
+kprobe:vfs_read
+// this program is attached to the event above
+{
+  // tid and nsecs are built-ins, thread id and timestamp
+  // @start is a map
+  @start[tid] = nsecs;
+}
+
+kretprobe:vfs_read
+// filters only execute the program if true/non-zero
+/@start[tid]/
+{
+  $duration_us = (nsecs - @start[tid]) / 1000;
+  // hist is one of the provided functions for aggregating maps
+  @us = hist($duration_us);
+  // all maps will be output on exit
+  delete(@start[tid]);
+}

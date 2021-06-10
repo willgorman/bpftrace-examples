@@ -1,0 +1,10 @@
+#!/usr/bin/bpftrace
+
+// sudo ./demos/bpftrace/scripts/ruby_raise.bt
+// ./demos/bpftrace/scripts/raiser.rb
+
+// ruby:::raise(classname, filename, lineno);: This probe is fired when an exception is raised.
+usdt:/home/vagrant/.rubies/ruby-2.6.7/bin/ruby:ruby:raise
+{
+  printf("oh no, %s raised from %s:%d (%s)\n", str(arg0), str(arg1), arg2, comm)
+}

@@ -1,0 +1,37 @@
+#!/usr/bin/bpftrace
+
+// sudo ./demos/bpftrace/scripts/iscsi_logins_ubuntu.bt
+// iscsi-inq -i iqn.1993-08.org.debian:01:foo iscsi://localhost/iqn.1993-08.org.debian:01:bar/0
+
+// redefined from libscsi/include/iscsi.h
+// making sense of uprobe args/retvals often will require the source
+enum iscsi_transport_type {
+    TCP_TRANSPORT = 0,
+    ISER_TRANSPORT = 1
+};
+struct iscsi_context {
+    struct iscsi_transport *drv;
+    void *opaque;
+    enum iscsi_transport_type transport;
+    // This is actually 100+1 but!
+    // error: <unknown>:0:0: in function uprobe:/usr/lib64/iscsi/libiscsi.so.8:iscsi_connect_async i64 (i8*): 
+    // Looks like the BPF stack limit of 512 bytes is exceeded. Please move large on stack variables into BPF per-cpu array map.
+    // The proper solution is to copy values into a BPF map but here we'll just risk truncation
+    char initiator_name[32+1];
+    char target_name[100+1];
+    char target_address[100+1];  /* If a redirect */
+    char connected_portal[255+1];
+    char portal[255+1];
+    char alias[255+1];
+    char bind_interfaces[255+1];
+    char user[255+1];
+    char passwd[255+1];
+    char chap_c[2048+1];
+    char target_user[255+1];
+    char target_passwd[255+1];
+};
+
+uprobe:/usr/lib/x86_64-linux-gnu/libiscsi.so.7.0.0:iscsi_connect_async 
+{
+  printf("%s -> %s\n", ((struct iscsi_context *)arg0)->initiator_name, str(arg1));
+}
